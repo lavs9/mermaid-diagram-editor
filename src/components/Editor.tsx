@@ -3,6 +3,8 @@ import CodeMirror from "@uiw/react-codemirror"
 import { markdown } from "@codemirror/lang-markdown"
 import { EditorView } from "@codemirror/view"
 import { vscodeDark } from "@uiw/codemirror-theme-vscode"
+import { linter } from "@codemirror/lint"
+import { mermaidValidator } from "@/utils/mermaid-validator"
 
 interface EditorProps {
   onChange: (value: string) => void
@@ -10,21 +12,27 @@ interface EditorProps {
 }
 
 export function Editor({ onChange, initialValue = "" }: EditorProps) {
-  const [value, setValue] = useState(initialValue)
-
-  useEffect(() => {
-    onChange(value)
-  }, [value, onChange])
-
   return (
-    <CodeMirror
-      value={value}
-      height="100%"
-      extensions={[markdown(), EditorView.lineWrapping]}
-      onChange={(val) => setValue(val)}
-      theme={vscodeDark}
-      className="h-full"
-    />
+    <div className="h-full w-full">
+      <CodeMirror
+        value={initialValue}
+        height="100%"
+        width="100%"
+        extensions={[
+          markdown(),
+          EditorView.lineWrapping,
+          linter(mermaidValidator)
+        ]}
+        onChange={onChange}
+        basicSetup={{
+          lineNumbers: true,
+          highlightActiveLineGutter: true,
+          highlightActiveLine: true,
+          foldGutter: true,
+        }}
+        className="h-full text-sm"
+      />
+    </div>
   )
 }
 

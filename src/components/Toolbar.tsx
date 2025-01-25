@@ -3,18 +3,18 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface ToolbarProps {
-  onRun: () => void
+//  onRun: () => void
   onExport: (format: string) => void
 }
 
-export function Toolbar({ onRun, onExport }: ToolbarProps) {
+export function Toolbar({onExport }: ToolbarProps) {
   return (
     <div className="flex items-center justify-between p-2 bg-background border-b">
       <div className="flex items-center space-x-2">
-        <Button onClick={onRun} size="sm">
+        {/* <Button onClick={onRun} size="sm">
           <Play className="mr-2 h-4 w-4" />
           Run
-        </Button>
+        </Button> */}
         <Select onValueChange={onExport}>
           <SelectTrigger className="w-[120px]">
             <SelectValue placeholder="Export" />

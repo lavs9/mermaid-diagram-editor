@@ -1,23 +1,25 @@
 import { useState, useCallback } from 'react'
 
-export function useUndo<T>(initialState: T) {
-  const [history, setHistory] = useState<T[]>([initialState])
+export function useUndo<T>(initialPresent: T) {
+  const [history, setHistory] = useState<T[]>([initialPresent])
   const [currentIndex, setCurrentIndex] = useState(0)
 
   const canUndo = currentIndex > 0
   const canRedo = currentIndex < history.length - 1
 
-  const undo = useCallback(() => {
+  const undo = (updateState: (state: T) => void) => {
     if (canUndo) {
+      updateState(history[currentIndex - 1])
       setCurrentIndex(currentIndex - 1)
     }
-  }, [canUndo, currentIndex])
+  }
 
-  const redo = useCallback(() => {
+  const redo = (updateState: (state: T) => void) => {
     if (canRedo) {
+      updateState(history[currentIndex + 1])
       setCurrentIndex(currentIndex + 1)
     }
-  }, [canRedo, currentIndex])
+  }
 
   const addToHistory = useCallback((state: T) => {
     setHistory(prev => [...prev.slice(0, currentIndex + 1), state])

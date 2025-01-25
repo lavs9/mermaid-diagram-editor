@@ -15,6 +15,7 @@ interface ZoomControlsProps {
   canRedo: boolean
   isPanning: boolean
   scale: number
+  className?: string
 }
 
 export function ZoomControls({
@@ -28,10 +29,11 @@ export function ZoomControls({
   canRedo,
   isPanning,
   scale,
+  className,
 }: ZoomControlsProps) {
   return (
     <TooltipProvider delayDuration={0}>
-      <div className="absolute bottom-4 right-4 z-10 flex items-center gap-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 rounded-lg border p-1">
+      <div className="absolute bottom-4 right-4 z-20 flex items-center gap-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 rounded-lg border p-1 shadow-lg">
         <div className="flex items-center gap-1">
           <Tooltip>
             <TooltipTrigger asChild>
