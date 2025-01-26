@@ -7,24 +7,26 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { MousePointer, Plus, Type, Box, Smile } from "lucide-react"
+import { getShapesByCategory, getSvgFromString } from "@/lib/shapes"
 
 interface DiagramToolbarProps {
   onToolSelect: (tool: string) => void
   selectedTool: string
+  onAddNode: (
+    node: { id: string; type: string; x: number; y: number },
+    e: React.MouseEvent
+  ) => void
 }
 
-const shapes = {
-  basic: ["rectangle", "rounded", "circle", "rhombus", "hexagon", "parallelogram"],
-  process: ["rectangle", "stadium", "subroutine", "database", "queue", "storage"],
-  technical: ["cylinder", "diamond", "hexagon", "trapezoid", "step", "document"],
-}
+const categories = ["basic", "process", "technical"]
 
-export function DiagramToolbar({ onToolSelect, selectedTool }: DiagramToolbarProps) {
+export function DiagramToolbar({ onToolSelect, selectedTool, onAddNode }: DiagramToolbarProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [activeTab, setActiveTab] = useState("basic")
 
-  const filteredShapes = shapes[activeTab as keyof typeof shapes].filter((shape) =>
-    shape.toLowerCase().includes(searchTerm.toLowerCase()),
+  const shapes = getShapesByCategory(activeTab)
+  const filteredShapes = Object.entries(shapes).filter(([name, shape]) =>
+    shape.label.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   return (
@@ -70,22 +72,35 @@ export function DiagramToolbar({ onToolSelect, selectedTool }: DiagramToolbarPro
                   className="my-2"
                 />
                 <ScrollArea className="h-72">
-                  <div className="grid grid-cols-3 gap-2 p-2">
-                    {filteredShapes.map((shape) => (
-                      <Button
-                        key={shape}
-                        variant="outline"
-                        className="h-20 flex flex-col items-center justify-center"
-                        onClick={() => {
-                          onToolSelect("node")
-                          // TODO: Add logic to insert the selected shape
-                        }}
-                      >
-                        <div className="w-12 h-12 border-2 border-foreground flex items-center justify-center">
-                          {/* Placeholder for shape icon */}
-                        </div>
-                        <span className="text-xs mt-1">{shape}</span>
-                      </Button>
+                  <div className="grid grid-cols-4 gap-1 p-1">
+                    {filteredShapes.map(([name, shape]) => (
+                      <Tooltip key={name}>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="h-20 flex flex-col items-center justify-center group"
+                            onClick={(e) => {
+                              onAddNode({
+                                id: `node_${Date.now()}`,
+                                type: name,
+                                x: e.clientX - 100,
+                                y: e.clientY - 50
+                              }, e);
+                              onToolSelect("select");
+                            }}
+                          >
+                            <div className="h-14 w-14 rounded-md bg-surface-50 dark:bg-surface-800 group-hover:bg-primary-200 dark:group-hover:bg-surface-700 p-2 flex items-center justify-center">
+                              <div
+                                className="w-[90%] h-[90%]"
+                                dangerouslySetInnerHTML={{
+                                  __html: getSvgFromString(shape.svg, "w-full h-full")
+                                }}
+                              />
+                            </div>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">{shape.label}</TooltipContent>
+                      </Tooltip>
                     ))}
                   </div>
                 </ScrollArea>

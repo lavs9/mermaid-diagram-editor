@@ -36,6 +36,12 @@ export function PreviewPane({ code, onHistoryChange, onUndo, onRedo, canUndo, ca
 
   const [isDragging, setIsDragging] = useState(false)
   const [startPosition, setStartPosition] = useState({ x: 0, y: 0 })
+  const [nodes, setNodes] = useState<Array<{
+    id: string
+    type: string
+    x: number
+    y: number
+  }>>([])
 
   const handleZoom = useCallback((delta: number) => {
     setScale(s => Math.min(Math.max(s + delta, 0.1), 5))
@@ -155,8 +161,34 @@ export function PreviewPane({ code, onHistoryChange, onUndo, onRedo, canUndo, ca
           transition: isDragging ? "none" : "transform 0.1s ease-out",
         }}
         className="w-full h-full flex items-center justify-center"
+      >
+        {nodes.map(node => (
+          <div
+            key={node.id}
+            className="absolute border-2 border-foreground bg-background/80 backdrop-blur-sm rounded"
+            style={{
+              left: node.x * scale + position.x,
+              top: node.y * scale + position.y,
+              width: 80 * scale,
+              height: 80 * scale,
+            }}
+          />
+        ))}
+      </div>
+      <DiagramToolbar 
+        selectedTool={selectedTool} 
+        onToolSelect={setSelectedTool}
+        onAddNode={(node, e) => {
+          const rect = e.currentTarget.getBoundingClientRect();
+          const newNode = {
+            id: node.id,
+            type: node.type,
+            x: (e.clientX - rect.left - position.x) / scale - 40,
+            y: (e.clientY - rect.top - position.y) / scale - 40
+          };
+          setNodes(prev => [...prev, newNode]);
+        }}
       />
-      <DiagramToolbar selectedTool={selectedTool} onToolSelect={setSelectedTool} />
       <ZoomControls
         onZoomIn={() => handleZoom(0.1)}
         onZoomOut={() => handleZoom(-0.1)}

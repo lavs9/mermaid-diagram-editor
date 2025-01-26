@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Sidebar } from "@/components/Sidebar"
 import { Editor } from "@/components/Editor"
 import { PreviewPane } from "@/components/PreviewPane"
@@ -20,6 +20,8 @@ export default function Home() {
   const debouncedSetCode = useDebouncedCallback(setCode, 300)
   const [selectedType, setSelectedType] = useState("flowchart")
   const { canUndo, canRedo, undo, redo, addToHistory } = useUndo<string>(code)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [nodes, setNodes] = useState<Array<{ id: string; type: string; x: number; y: number }>>([])
 
   const handleChartTypeSelect = (type: string, sampleCode: string) => {
     setSelectedType(type)
@@ -36,9 +38,17 @@ export default function Home() {
     console.log(`Exporting as ${format}`)
   }
 
+  const handleAddNode = (node: { id: string; type: string; x: number; y: number }, e: React.MouseEvent) => {
+    setNodes(prev => [...prev, {
+      ...node,
+      x: e.clientX - (containerRef.current?.getBoundingClientRect().left || 0),
+      y: e.clientY - (containerRef.current?.getBoundingClientRect().top || 0)
+    }]);
+  };
+
   return (
     <ErrorBoundary>
-      <div className="flex h-screen w-screen overflow-hidden">
+      <div ref={containerRef} className="flex h-screen w-screen overflow-hidden">
         <aside className="w-64 border-r border-border bg-background">
           <Sidebar onChartTypeSelect={handleChartTypeSelect} selectedType={selectedType} />
         </aside>
