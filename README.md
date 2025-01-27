@@ -2,8 +2,6 @@
 
 A visual editor for creating and editing Mermaid.js diagrams with real-time preview and export capabilities.
 
-![Demo Preview](https://via.placeholder.com/800x500.png?text=Mermaid+Editor+Preview)
-
 ## Features
 
 - **Visual Diagram Editing**
@@ -67,11 +65,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 ### Running Locally
 1. Access the editor at `http://localhost:3000`
 2. Use the left sidebar to select diagram templates
-3. Edit code in the left panel or add nodes visually using:
-   ```typescript:src/components/DiagramToolbar.tsx
-   startLine: 84
-   endLine: 93
-   ```
+3. Edit code in the left panel or add nodes visually.
 4. Preview updates automatically in the right panel
 5. Export diagrams using the toolbar options
 
