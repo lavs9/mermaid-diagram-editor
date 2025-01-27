@@ -21,6 +21,13 @@ export const shapeLibrary: ShapeCategories = {
   technical: technicalShapes,
 }
 
+export const mermaidShapeTypes: {[key: string]: string} = {
+  rectangle: 'rect',
+  rounded: 'rounded',
+  database: 'cylinder',
+  stadium: 'stadium'
+};
+
 export function getSvgFromString(svgString: string, className?: string): string {
   if (className) {
     return svgString.replace("<svg", `<svg class="${className}"`)
@@ -38,5 +45,9 @@ export function addCustomShape(category: string, name: string, svg: string, labe
     shapeLibrary[category] = {}
   }
   shapeLibrary[category][name] = { svg, label }
+}
+
+export function getShapeType(category: string, name: string): string {
+  return mermaidShapeTypes[name] || 'rect';
 }
 

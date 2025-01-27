@@ -15,13 +15,26 @@ A[Client] --> B[Load Balancer]
 B --> C[Server01]
 B --> D[Server02]`
 
+const shapeMap: {[key: string]: string} = {
+  rectangle: 'rect',
+  rounded: 'rounded',
+  circle: 'circle',
+  stadium: 'stadium'
+};
+
+const convertNodesToCode = (nodes: Array<{id: string; type: string}>) => {
+  let codeLines = [];
+  codeLines.push(...nodes.map(node => `${node.id}["${node.type}"]`));
+  codeLines.push(...nodes.map(node => `${node.id}@{"shape": "${shapeMap[node.type] || 'rect'}"}`));
+  return codeLines.join('\n');
+};
+
 export default function Home() {
   const [code, setCode] = useState(initialCode)
   const debouncedSetCode = useDebouncedCallback(setCode, 300)
   const [selectedType, setSelectedType] = useState("flowchart")
   const { canUndo, canRedo, undo, redo, addToHistory } = useUndo<string>(code)
   const containerRef = useRef<HTMLDivElement>(null)
-  const [nodes, setNodes] = useState<Array<{ id: string; type: string; x: number; y: number }>>([])
 
   const handleChartTypeSelect = (type: string, sampleCode: string) => {
     setSelectedType(type)
@@ -38,12 +51,10 @@ export default function Home() {
     console.log(`Exporting as ${format}`)
   }
 
-  const handleAddNode = (node: { id: string; type: string; x: number; y: number }, e: React.MouseEvent) => {
-    setNodes(prev => [...prev, {
-      ...node,
-      x: e.clientX - (containerRef.current?.getBoundingClientRect().left || 0),
-      y: e.clientY - (containerRef.current?.getBoundingClientRect().top || 0)
-    }]);
+  const handleAddNode = (node: { id: string; type: string }, e: React.MouseEvent) => {
+    const newCode = `${code}\n${convertNodesToCode([node])}`;
+    setCode(newCode);
+    addToHistory(newCode);
   };
 
   return (
@@ -75,6 +86,7 @@ export default function Home() {
                 onRedo={redo}
                 canUndo={canUndo}
                 canRedo={canRedo}
+                onAddNode={handleAddNode}
               />
             </div>
           </div>

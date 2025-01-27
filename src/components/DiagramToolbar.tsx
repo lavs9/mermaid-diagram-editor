@@ -74,33 +74,39 @@ export function DiagramToolbar({ onToolSelect, selectedTool, onAddNode }: Diagra
                 <ScrollArea className="h-72">
                   <div className="grid grid-cols-4 gap-1 p-1">
                     {filteredShapes.map(([name, shape]) => (
-                      <Tooltip key={name}>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className="h-20 flex flex-col items-center justify-center group"
-                            onClick={(e) => {
-                              onAddNode({
-                                id: `node_${Date.now()}`,
-                                type: name,
-                                x: e.clientX - 100,
-                                y: e.clientY - 50
-                              }, e);
-                              onToolSelect("select");
+                      <div key={name} className="relative group">
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          aria-label={shape.label}
+                          data-shape={shape.label}
+                          className="shape-popup-item rounded-md bg-surface-50 hover:bg-primary-200 dark:hover:bg-surface-600 p-2 h-12 w-12 flex items-center justify-center"
+                          onClick={(e) => {
+                            onAddNode({
+                              id: `node_${Date.now()}`,
+                              type: name,
+                              x: e.clientX - 100,
+                              y: e.clientY - 50
+                            }, e);
+                            onToolSelect("select");
+                          }}
+                        >
+                          <div
+                            dangerouslySetInnerHTML={{
+                              __html: getSvgFromString(
+                                shape.svg, 
+                                "h-12 w-12 dark:bg-white dark:text-primary-500"
+                              )
                             }}
-                          >
-                            <div className="h-14 w-14 rounded-md bg-surface-50 dark:bg-surface-800 group-hover:bg-primary-200 dark:group-hover:bg-surface-700 p-2 flex items-center justify-center">
-                              <div
-                                className="w-[90%] h-[90%]"
-                                dangerouslySetInnerHTML={{
-                                  __html: getSvgFromString(shape.svg, "w-full h-full")
-                                }}
-                              />
-                            </div>
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="right">{shape.label}</TooltipContent>
-                      </Tooltip>
+                          />
+                        </div>
+                        <div className="absolute left-1/2 -translate-x-1/2 mt-2 hidden group-hover:block z-50">
+                          <div className="relative bg-black text-white text-xs rounded-md py-1 px-2 shadow-md">
+                            {shape.label}
+                            <div className="absolute left-1/2 -translate-x-1/2 -top-1 w-2 h-2 bg-black rotate-45" />
+                          </div>
+                        </div>
+                      </div>
                     ))}
                   </div>
                 </ScrollArea>

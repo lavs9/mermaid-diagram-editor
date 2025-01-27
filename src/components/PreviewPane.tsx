@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState, useCallback } from "react"
+import { useEffect, useRef, useState, useCallback, useMemo } from "react"
 import mermaid from "mermaid"
 import { Card } from "@/components/ui/card"
 import { DiagramToolbar } from "./DiagramToolbar"
@@ -14,6 +14,7 @@ interface PreviewPaneProps {
   onRedo: (updateState: (state: string) => void) => void
   canUndo: boolean
   canRedo: boolean
+  onAddNode: (node: { id: string; type: string }, e: React.MouseEvent) => void
 }
 
 interface PreviewState {
@@ -22,7 +23,7 @@ interface PreviewState {
   position: { x: number; y: number }
 }
 
-export function PreviewPane({ code, onHistoryChange, onUndo, onRedo, canUndo, canRedo }: PreviewPaneProps) {
+export function PreviewPane({ code, onHistoryChange, onUndo, onRedo, canUndo, canRedo, onAddNode }: PreviewPaneProps) {
   const ref = useRef<HTMLDivElement>(null)
   const [selectedTool, setSelectedTool] = useState("select")
   const [isPanning, setIsPanning] = useState(false)
@@ -36,12 +37,6 @@ export function PreviewPane({ code, onHistoryChange, onUndo, onRedo, canUndo, ca
 
   const [isDragging, setIsDragging] = useState(false)
   const [startPosition, setStartPosition] = useState({ x: 0, y: 0 })
-  const [nodes, setNodes] = useState<Array<{
-    id: string
-    type: string
-    x: number
-    y: number
-  }>>([])
 
   const handleZoom = useCallback((delta: number) => {
     setScale(s => Math.min(Math.max(s + delta, 0.1), 5))
@@ -135,6 +130,38 @@ export function PreviewPane({ code, onHistoryChange, onUndo, onRedo, canUndo, ca
     onHistoryChange(state)
   })
 
+  const parseNodesFromCode = (code: string) => {
+    const nodes: Array<{id: string; type: string; x: number; y: number}> = [];
+    const lines = code.split('\n');
+    
+    // Match node definitions like: nodeId["Label"]
+    const nodeRegex = /^(\w+)\["(.+)"\]/;
+    // Match shape definitions like: nodeId@{"shape": "rect"}
+    const shapeRegex = /^(\w+)@\{"shape": "(\w+)"\}/;
+
+    lines.forEach(line => {
+      let match: RegExpMatchArray | null;
+      if ((match = line.match(nodeRegex))) {
+        nodes.push({
+          id: match[1],
+          type: match[2].toLowerCase(),
+          x: 0,  // Default positions
+          y: 0
+        });
+      }
+      else if ((match = line.match(shapeRegex))) {
+        const node = nodes.find(n => n.id === match![1]);
+        if (node) {
+          node.type = match![2];
+        }
+      }
+    });
+
+    return nodes;
+  };
+
+  const nodes = useMemo(() => parseNodesFromCode(code), [code]);
+
   return (
     <Card
       className="h-full w-full bg-background/50 rounded-none border-0 overflow-hidden relative"
@@ -162,32 +189,11 @@ export function PreviewPane({ code, onHistoryChange, onUndo, onRedo, canUndo, ca
         }}
         className="w-full h-full flex items-center justify-center"
       >
-        {nodes.map(node => (
-          <div
-            key={node.id}
-            className="absolute border-2 border-foreground bg-background/80 backdrop-blur-sm rounded"
-            style={{
-              left: node.x * scale + position.x,
-              top: node.y * scale + position.y,
-              width: 80 * scale,
-              height: 80 * scale,
-            }}
-          />
-        ))}
       </div>
       <DiagramToolbar 
         selectedTool={selectedTool} 
         onToolSelect={setSelectedTool}
-        onAddNode={(node, e) => {
-          const rect = e.currentTarget.getBoundingClientRect();
-          const newNode = {
-            id: node.id,
-            type: node.type,
-            x: (e.clientX - rect.left - position.x) / scale - 40,
-            y: (e.clientY - rect.top - position.y) / scale - 40
-          };
-          setNodes(prev => [...prev, newNode]);
-        }}
+        onAddNode={onAddNode}
       />
       <ZoomControls
         onZoomIn={() => handleZoom(0.1)}
