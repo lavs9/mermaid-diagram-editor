@@ -1,8 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Mermaid Diagram Editor
+
+A visual editor for creating and editing Mermaid.js diagrams with real-time preview and export capabilities.
+
+![Demo Preview](https://via.placeholder.com/800x500.png?text=Mermaid+Editor+Preview)
+
+## Features
+
+- **Visual Diagram Editing**
+  - Add nodes/shapes through toolbar
+  - Drag-to-pan and zoom controls
+  - Undo/redo functionality
+- **Real-time Preview**
+  - Instant Mermaid.js rendering
+  - Syntax validation
+- **Multiple Export Options**
+  - PNG/SVG image export
+  - Embed code generation
+- **Template Library**
+  - Pre-built templates for common diagrams
+  - Sample flows for quick starts
+- **Responsive Design**
+  - Adjustable split-pane layout
+  - Dark/light theme support
+
+## Technologies
+
+- React + Next.js
+- Mermaid.js (v11+)
+- Shadcn UI Components
+- CodeMirror Editor
+- use-undo for history management
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+- Node.js v18+
+- npm v9+
+
+### Installation
+
+Install the dependencies:
+
+```bash
+npm install
+# or
+yarn install
+# or
+pnpm dev
+# or
+bun dev
+```
+
+Run the development server:
 
 ```bash
 npm run dev
@@ -13,10 +62,19 @@ pnpm dev
 # or
 bun dev
 ```
-
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Running Locally
+1. Access the editor at `http://localhost:3000`
+2. Use the left sidebar to select diagram templates
+3. Edit code in the left panel or add nodes visually using:
+   ```typescript:src/components/DiagramToolbar.tsx
+   startLine: 84
+   endLine: 93
+   ```
+4. Preview updates automatically in the right panel
+5. Export diagrams using the toolbar options
+
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
