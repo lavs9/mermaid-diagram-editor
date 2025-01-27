@@ -2,8 +2,6 @@
 
 A visual editor for creating and editing Mermaid.js diagrams with real-time preview and export capabilities.
 
-![Demo Preview](https://via.placeholder.com/800x500.png?text=Mermaid+Editor+Preview)
-
 ## Features
 
 - **Visual Diagram Editing**
