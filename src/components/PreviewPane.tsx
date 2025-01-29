@@ -6,12 +6,16 @@ import { Card } from "@/components/ui/card"
 import { DiagramToolbar } from "./DiagramToolbar"
 import { ZoomControls } from "./ZoomControls"
 import { useUndo } from "@/hooks/use-undo"
+import { Shape } from "./Shape"
+import { convertNodesToCode } from "@/lib/shapes"
+import { ShapeToolbar } from "./ShapeToolbar"
+
 
 interface PreviewPaneProps {
   code: string
-  onHistoryChange: (code: string) => void
-  onUndo: (updateState: (state: string) => void) => void
-  onRedo: (updateState: (state: string) => void) => void
+  onHistoryChange: (state: PreviewState) => void
+  onUndo: (updateState: (state: PreviewState) => void) => void
+  onRedo: (updateState: (state: PreviewState) => void) => void
   canUndo: boolean
   canRedo: boolean
   onAddNode: (node: { id: string; type: string }, e: React.MouseEvent) => void
@@ -23,14 +27,27 @@ interface PreviewState {
   position: { x: number; y: number }
 }
 
+interface DiagramNode {
+  id: string;
+  type: string;
+  x: number;
+  y: number;
+  label: string;
+  fillColor?: string;
+  borderWidth?: string;
+  borderStyle?: string;
+}
+
+
 export function PreviewPane({ code, onHistoryChange, onUndo, onRedo, canUndo, canRedo, onAddNode }: PreviewPaneProps) {
-  const ref = useRef<HTMLDivElement>(null)
+  const svgRef = useRef<SVGSVGElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [selectedTool, setSelectedTool] = useState("select")
   const [isPanning, setIsPanning] = useState(false)
   const [scale, setScale] = useState(1)
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const { canUndo: undoCanUndo, canRedo: undoCanRedo, undo, redo, addToHistory } = useUndo<PreviewState>({
-    code,
+    code: code,
     scale: 1,
     position: { x: 0, y: 0 }
   })
@@ -38,42 +55,52 @@ export function PreviewPane({ code, onHistoryChange, onUndo, onRedo, canUndo, ca
   const [isDragging, setIsDragging] = useState(false)
   const [startPosition, setStartPosition] = useState({ x: 0, y: 0 })
 
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null)
+
+  const [toolbarPosition, setToolbarPosition] = useState<{ x: number; y: number } | null>(null)
+
   const handleZoom = useCallback((delta: number) => {
     setScale(s => Math.min(Math.max(s + delta, 0.1), 5))
   }, [])
 
   useEffect(() => {
-    mermaid.initialize({ startOnLoad: false })
-  }, [])
+    mermaid.initialize({ 
+      startOnLoad: false,
+      securityLevel: 'loose',
+      theme: 'neutral'
+    });
 
-  useEffect(() => {
-    const controller = new AbortController()
-    let shouldUpdateHistory = true
-    
     const renderDiagram = async () => {
       try {
-        if (controller.signal.aborted) return
-        await mermaid.parse(code)
-        if (!ref.current) return
-        
-        const { svg } = await mermaid.render("mermaid-diagram", code)
-        ref.current.innerHTML = svg
-        if (shouldUpdateHistory) {
-          addToHistory({ code, scale, position })
+        if (containerRef.current) {
+          const { svg } = await mermaid.render('mermaid-svg', code);
+          containerRef.current.innerHTML = svg;
+          
+          // Add click handlers to nodes
+          const nodes = containerRef.current.querySelectorAll('.node');
+          nodes.forEach(node => {
+            node.addEventListener('click', (e) => {
+              const target = e.currentTarget as HTMLElement;
+              const rect = target.getBoundingClientRect();
+              const rawId = target.id.replace(/^flowchart-/, '').replace(/-[0-9]+$/, '');
+              const nodeId = rawId.startsWith('n') ? rawId : `n${rawId}`;
+              
+              setToolbarPosition({
+                x: rect.left + rect.width/2 + window.scrollX,
+                y: rect.top - 10 + window.scrollY
+              });
+              setSelectedNodeId(nodeId);
+            });
+          });
         }
-      } catch (error) {
-        console.error("Error rendering diagram:", error)
-        shouldUpdateHistory = false
+      } catch (err) {
+        console.error('Mermaid rendering error:', err);
       }
-    }
+    };
 
-    const timer = setTimeout(renderDiagram, 300)
-    return () => {
-      controller.abort()
-      clearTimeout(timer)
-      shouldUpdateHistory = false
-    }
-  }, [code, scale, position])
+    renderDiagram();
+  }, [code]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (isPanning) {
@@ -118,41 +145,69 @@ export function PreviewPane({ code, onHistoryChange, onUndo, onRedo, canUndo, ca
     setPosition(state.position)
   }
 
-  const handleUndo = () => onUndo((state) => {
-    setScale(1)
-    setPosition({ x: 0, y: 0 })
+  const handleUndo = () => onUndo((state: PreviewState) => {
+    setScale(state.scale)
+    setPosition(state.position)
     onHistoryChange(state)
   })
 
-  const handleRedo = () => onRedo((state) => {
-    setScale(1)
-    setPosition({ x: 0, y: 0 })
+  const handleRedo = () => onRedo((state: PreviewState) => {
+    setScale(state.scale)
+    setPosition(state.position)
     onHistoryChange(state)
   })
 
   const parseNodesFromCode = (code: string) => {
-    const nodes: Array<{id: string; type: string; x: number; y: number}> = [];
+    const nodes: Array<{
+      id: string;
+      type: string;
+      x: number;
+      y: number;
+      label: string;
+      fillColor?: string;
+      borderWidth?: string;
+      borderStyle?: string;
+    }> = [];
     const lines = code.split('\n');
     
     // Match node definitions like: nodeId["Label"]
-    const nodeRegex = /^(\w+)\["(.+)"\]/;
+    const nodeRegex = /^(\w+)(?:\["(.+?)"\])?/;
     // Match shape definitions like: nodeId@{"shape": "rect"}
     const shapeRegex = /^(\w+)@\{"shape": "(\w+)"\}/;
+    // Match style definitions like: style nodeId fill:#fff,stroke-width:2px
+    const styleRegex = /^style (\w+) (.+)/;
 
     lines.forEach(line => {
       let match: RegExpMatchArray | null;
       if ((match = line.match(nodeRegex))) {
-        nodes.push({
-          id: match[1],
-          type: match[2].toLowerCase(),
-          x: 0,  // Default positions
-          y: 0
-        });
+        const nodeId = match[1].startsWith('n') ? match[1] : `n${match[1]}`;
+        // Check if node already exists
+        if (!nodes.find(n => n.id === nodeId)) {
+          nodes.push({
+            id: nodeId,
+            type: (match[2] || match[1]).toLowerCase(),
+            x: 0,
+            y: 0,
+            label: match[2] || match[1]
+          });
+        }
       }
       else if ((match = line.match(shapeRegex))) {
         const node = nodes.find(n => n.id === match![1]);
         if (node) {
           node.type = match![2];
+        }
+      }
+      else if ((match = line.match(styleRegex))) {
+        const node = nodes.find(n => n.id === match![1]);
+        if (node) {
+          const styles = match![2].split(',');
+          styles.forEach(style => {
+            const [key, value] = style.split(':');
+            if (key === 'fill') node.fillColor = value;
+            if (key === 'stroke-width') node.borderWidth = value;
+            if (key === 'stroke-dasharray') node.borderStyle = value !== '0' ? 'dashed' : 'solid';
+          });
         }
       }
     });
@@ -161,6 +216,36 @@ export function PreviewPane({ code, onHistoryChange, onUndo, onRedo, canUndo, ca
   };
 
   const nodes = useMemo(() => parseNodesFromCode(code), [code]);
+
+  const handleTextChange = (id: string, newText: string) => {
+    const lines = code.split('\n');
+    const updatedCode = lines.map(line => {
+      if (line.startsWith(`${id}[`)) {
+        return `${id}["${newText}"]`;
+      }
+      return line;
+    }).join('\n');
+    
+    onHistoryChange({
+      code: updatedCode,
+      scale,
+      position
+    });
+  };
+
+  const updateDiagramCode = (updatedNodes: Array<DiagramNode>) => {
+    const newCode = convertNodesToCode(nodes.map(n => 
+      updatedNodes.find(un => un.id === n.id) || n
+    ));
+    onHistoryChange({
+      code: newCode,
+      scale,
+      position
+    });
+  };
+
+  const toolbarX = 0;
+  const toolbarY = 0;
 
   return (
     <Card
@@ -181,15 +266,14 @@ export function PreviewPane({ code, onHistoryChange, onUndo, onRedo, canUndo, ca
         }}
       />
       <div
-        ref={ref}
+        ref={containerRef}
         style={{
           transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
           transformOrigin: "0 0",
           transition: isDragging ? "none" : "transform 0.1s ease-out",
         }}
         className="w-full h-full flex items-center justify-center"
-      >
-      </div>
+      />
       <DiagramToolbar 
         selectedTool={selectedTool} 
         onToolSelect={setSelectedTool}
@@ -208,6 +292,44 @@ export function PreviewPane({ code, onHistoryChange, onUndo, onRedo, canUndo, ca
         scale={scale}
         className="z-20"
       />
+      {selectedNodeId && toolbarPosition && (
+        <ShapeToolbar 
+          nodeId={selectedNodeId}
+          onClose={() => {
+            setSelectedNodeId(null);
+            setToolbarPosition(null);
+          }}
+          onStyleChange={(styleUpdates) => {
+            console.log('PreviewPane - Received style updates:', styleUpdates);
+            const updates = new Map(styleUpdates.split(',').map(s => s.split(':') as [string, string]));
+            
+            const newLines = code.split('\n').map(line => {
+              if (line.startsWith(`style ${selectedNodeId}`)) {
+                const existing = new Map(line.split(' ')[2].split(',').map(s => s.split(':') as [string, string]));
+                console.log('Existing styles:', Array.from(existing));
+                updates.forEach((v, k) => existing.set(k, v));
+                return `style ${selectedNodeId} ${Array.from(existing).map(([k,v]) => `${k}:${v}`).join(',')}`;
+              }
+              return line;
+            });
+
+            if (!newLines.some(line => line.startsWith(`style ${selectedNodeId}`))) {
+              console.log('Adding new style line');
+              newLines.push(`style ${selectedNodeId} ${styleUpdates}`);
+            }
+
+            const newCode = newLines.join('\n');
+            console.log('Final code to save:', newCode);
+            onHistoryChange({ code: newCode, scale, position });
+          }}
+          style={{
+            position: 'fixed',
+            left: toolbarPosition.x,
+            top: toolbarPosition.y,
+            transform: 'translateX(-50%)'
+          }}
+        />
+      )}
     </Card>
   )
 }

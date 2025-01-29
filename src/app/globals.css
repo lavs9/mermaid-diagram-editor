@@ -115,3 +115,15 @@
     @apply text-xs;
   }
 }
+
+foreignObject[data-selected="true"] [data-selected="true"] {
+  @apply ring-2 ring-blue-500;
+}
+
+foreignObject:hover [data-selected="false"] {
+  @apply ring-2 ring-gray-500/50;
+}
+
+.absolute.-top-12 {
+  top: -3rem !important;
+}

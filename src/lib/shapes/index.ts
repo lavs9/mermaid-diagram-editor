@@ -25,7 +25,10 @@ export const mermaidShapeTypes: {[key: string]: string} = {
   rectangle: 'rect',
   rounded: 'rounded',
   database: 'cylinder',
-  stadium: 'stadium'
+  stadium: 'stadium',
+  diamond: 'rhombus',
+  hexagon: 'hexagon',
+  trapezoid: 'trapezoid'
 };
 
 export function getSvgFromString(svgString: string, className?: string): string {
@@ -51,3 +54,4 @@ export function getShapeType(category: string, name: string): string {
   return mermaidShapeTypes[name] || 'rect';
 }
 
+export { convertNodesToCode } from './shapes';
